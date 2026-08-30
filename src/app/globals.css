@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f0a1a;
+  --foreground: #f5f0ff;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Soft night gradient */
+.night-bg {
+  background: linear-gradient(160deg, #0f0a1a 0%, #1a1030 40%, #0d1b2a 100%);
+  min-height: 100vh;
+}
+
+.letter-paper {
+  background: linear-gradient(180deg, #fefce8 0%, #fef9c3 100%);
+  color: #1c1917;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 0 60px rgba(253, 224, 71, 0.1);
+}
+
+.letter-paper textarea {
+  background: transparent;
+  color: #1c1917;
+  resize: none;
+}
+
+.letter-paper textarea::placeholder {
+  color: #a8a29e;
+}
