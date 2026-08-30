@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { auth } from "@/auth";
 import db from "@/lib/db";
 import { getTodayDate } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "請先用 Google 登入" }, { status: 401 });
+  }
+  const userId = session.user.id;
+
   try {
     const body = await req.json();
-    const { userId, content, penName } = body;
+    const { content, penName } = body;
 
-    if (!userId || !content || content.trim().length < 10) {
+    if (!content || content.trim().length < 10) {
       return NextResponse.json(
-        { error: "userId and content (min 10 chars) required" },
+        { error: "內容至少要 10 個字" },
         { status: 400 }
       );
     }
 
-    // Ensure user exists
-    const user = db.prepare("SELECT id FROM users WHERE id = ?").get(userId);
-    if (!user) {
-      return NextResponse.json({ error: "User not found. Please refresh." }, { status: 404 });
-    }
-
     const today = getTodayDate();
 
-    // Check if already wrote today
     const existing = db
       .prepare("SELECT id FROM letters WHERE user_id = ? AND letter_date = ?")
       .get(userId, today);
@@ -51,22 +51,22 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get("userId");
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "請先用 Google 登入" }, { status: 401 });
   }
-
+  const userId = session.user.id;
   const today = getTodayDate();
 
-  // Check if user wrote today
   const myLetter = db
-    .prepare("SELECT id, content, pen_name, created_at FROM letters WHERE user_id = ? AND letter_date = ?")
+    .prepare(
+      "SELECT id, content, pen_name, created_at FROM letters WHERE user_id = ? AND letter_date = ?"
+    )
     .get(userId, today) as
     | { id: string; content: string; pen_name: string | null; created_at: string }
     | undefined;
 
-  // Check if already received today
   let received = db
     .prepare(
       `SELECT l.id, l.content, l.pen_name, l.created_at, l.delivered_at
@@ -83,9 +83,7 @@ export async function GET(req: NextRequest) {
       }
     | undefined;
 
-  // If not received yet and it's receive time (or for demo always try), assign one
   if (!received && myLetter) {
-    // Find a random undelivered letter from today, not from self
     const available = db
       .prepare(
         `SELECT id FROM letters
@@ -109,7 +107,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Also get past received letters (history)
   const history = db
     .prepare(
       `SELECT id, content, pen_name, created_at, delivered_at, letter_date
@@ -130,7 +127,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     hasWrittenToday: !!myLetter,
     myLetter: myLetter
-      ? { id: myLetter.id, content: myLetter.content, penName: myLetter.pen_name, createdAt: myLetter.created_at }
+      ? {
+          id: myLetter.id,
+          content: myLetter.content,
+          penName: myLetter.pen_name,
+          createdAt: myLetter.created_at,
+        }
       : null,
     receivedToday: received
       ? {
