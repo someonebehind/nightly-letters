@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Nightly Letters | 每晚一封信",
@@ -24,7 +25,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="antialiased night-bg">{children}</body>
+      <body className="antialiased night-bg">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

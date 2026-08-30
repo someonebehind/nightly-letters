@@ -10,14 +10,16 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, "letters.db");
 const db = new Database(dbPath);
 
-// Enable WAL for better concurrency
 db.pragma("journal_mode = WAL");
 
-// Initialize tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
+    email TEXT UNIQUE,
+    name TEXT,
+    image TEXT,
     nickname TEXT,
+    google_id TEXT UNIQUE,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -37,6 +39,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_letters_date ON letters(letter_date);
   CREATE INDEX IF NOT EXISTS idx_letters_delivered ON letters(delivered_to);
   CREATE INDEX IF NOT EXISTS idx_letters_user_date ON letters(user_id, letter_date);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_users_google ON users(google_id);
 `);
+
+try {
+  const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  const names = cols.map((c) => c.name);
+  if (!names.includes("email")) db.exec("ALTER TABLE users ADD COLUMN email TEXT");
+  if (!names.includes("name")) db.exec("ALTER TABLE users ADD COLUMN name TEXT");
+  if (!names.includes("image")) db.exec("ALTER TABLE users ADD COLUMN image TEXT");
+  if (!names.includes("google_id")) db.exec("ALTER TABLE users ADD COLUMN google_id TEXT");
+} catch (e) {
+  // ignore
+}
 
 export default db;
